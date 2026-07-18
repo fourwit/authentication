@@ -5,7 +5,7 @@ namespace Modules\Authentication\Http\Requests;
 use Illuminate\Foundation\Http\FormRequest;
 use Modules\Authentication\Http\Requests\Concerns\ValidatesOtpCredentials;
 
-class RegistrationOtpVerifyRequest extends FormRequest
+class ResendLoginOtpRequest extends FormRequest
 {
     use ValidatesOtpCredentials;
 
@@ -16,11 +16,6 @@ class RegistrationOtpVerifyRequest extends FormRequest
 
     public function rules(): array
     {
-        return $this->otpCredentialRules(requireCode: true, validatePhoneFormat: true);
-    }
-
-    protected function prepareForValidation(): void
-    {
-        $this->prepareOtpPhoneForValidation(normalizePhone: true);
+        return $this->otpCredentialRules(requireCode: false);
     }
 }

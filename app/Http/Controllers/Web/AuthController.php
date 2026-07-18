@@ -9,7 +9,10 @@ use Illuminate\Validation\ValidationException;
 use Modules\Authentication\Exceptions\PhoneVerificationNotConfiguredException;
 use Modules\Authentication\Facades\Authentication;
 use Modules\Authentication\Http\Requests\LoginRequest;
+use Modules\Authentication\Http\Requests\OtpCodeRequest;
+use Modules\Authentication\Http\Requests\ResendVerificationCodeRequest;
 use Modules\Authentication\Http\Requests\SetPasswordRequest;
+use Modules\Authentication\Http\Requests\VerifyVerificationCodeRequest;
 use Modules\Authentication\Services\RegistrationFollowUpService;
 use Modules\Authentication\Support\LoginMethodResolver;
 
@@ -129,7 +132,7 @@ class AuthController extends Controller
         ]);
     }
 
-    public function verifyLoginOtp(Request $request)
+    public function verifyLoginOtp(OtpCodeRequest $request)
     {
         $pending = session('pending_login_otp');
 
@@ -137,12 +140,8 @@ class AuthController extends Controller
             return redirect()->route('login')->with('error', 'Please start the login process again.');
         }
 
-        $validated = $request->validate([
-            'code' => ['required', 'string', 'size:' . (int) config('authentication.otp.length', 6)],
-        ]);
-
         try {
-            $result = Authentication::verifyLoginOtp($pending + $validated, 'web');
+            $result = Authentication::verifyLoginOtp($pending + $request->validated(), 'web');
         } catch (\Modules\Authentication\Exceptions\AccountLockedException $e) {
             return redirect()->route('authentication.account.locked');
         } catch (\Modules\Authentication\Exceptions\SuspendedAccountException|\Modules\Authentication\Exceptions\InactiveAccountException $e) {
@@ -289,16 +288,11 @@ class AuthController extends Controller
         ]);
     }
 
-    public function verifyCode(\Illuminate\Http\Request $request)
+    public function verifyCode(VerifyVerificationCodeRequest $request)
     {
-        $validated = $request->validate([
-            'code' => 'required|string|size:6',
-            'channel' => 'sometimes|string|in:email,phone',
-        ]);
-
         try {
             $userId = auth()->id();
-            $result = Authentication::verifyCode($validated + ['user_id' => $userId], 'web');
+            $result = Authentication::verifyCode($request->validated() + ['user_id' => $userId], 'web');
 
             if (($result['status'] ?? '') === 'verified') {
                 $user = $result['user'] ?? ($userId ? auth()->user() : null);
@@ -363,9 +357,9 @@ class AuthController extends Controller
             ->with('status', 'You can set a password later from your account settings.');
     }
 
-    public function resendVerificationCode(\Illuminate\Http\Request $request)
+    public function resendVerificationCode(ResendVerificationCodeRequest $request)
     {
-        $channel = $request->input('channel', (string) config('authentication.verification.channel', 'email'));
+        $channel = $request->validated('channel', (string) config('authentication.verification.channel', 'email'));
         $userId = auth()->id();
 
         \Illuminate\Support\Facades\Log::info('[VERIFY-RESEND] Resend button clicked', [

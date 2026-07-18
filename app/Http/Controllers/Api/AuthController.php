@@ -7,6 +7,8 @@ use Illuminate\Validation\ValidationException;
 use Modules\Authentication\Facades\Authentication;
 use Modules\Authentication\Exceptions\UnsupportedLoginMethodException;
 use Modules\Authentication\Http\Requests\LoginRequest;
+use Modules\Authentication\Http\Requests\ResendLoginOtpRequest;
+use Modules\Authentication\Http\Requests\VerifyLoginOtpRequest;
 use Modules\Authentication\Http\Resources\AuthenticatedUserResource;
 use Modules\Authentication\Http\Resources\TokenResource;
 
@@ -44,17 +46,10 @@ class AuthController extends Controller
         ]);
     }
 
-    public function verifyLoginOtp(\Illuminate\Http\Request $request)
+    public function verifyLoginOtp(VerifyLoginOtpRequest $request)
     {
-        $validated = $request->validate([
-            'auth_method' => ['required', 'string', 'in:email_otp,phone_otp'],
-            'email' => ['nullable', 'email', 'required_if:auth_method,email_otp'],
-            'phone' => ['nullable', 'string', 'required_if:auth_method,phone_otp'],
-            'code' => ['required', 'string', 'size:' . (int) config('authentication.otp.length', 6)],
-        ]);
-
         try {
-            $result = Authentication::verifyLoginOtp($validated, 'api');
+            $result = Authentication::verifyLoginOtp($request->validated(), 'api');
         } catch (\Modules\Authentication\Exceptions\AccountLockedException $e) {
             return response()->json(['message' => 'Account is locked due to too many failed attempts.'], 423);
         } catch (\Modules\Authentication\Exceptions\SuspendedAccountException|\Modules\Authentication\Exceptions\InactiveAccountException $e) {
@@ -71,16 +66,10 @@ class AuthController extends Controller
         ]);
     }
 
-    public function resendLoginOtp(\Illuminate\Http\Request $request)
+    public function resendLoginOtp(ResendLoginOtpRequest $request)
     {
-        $validated = $request->validate([
-            'auth_method' => ['required', 'string', 'in:email_otp,phone_otp'],
-            'email' => ['nullable', 'email', 'required_if:auth_method,email_otp'],
-            'phone' => ['nullable', 'string', 'required_if:auth_method,phone_otp'],
-        ]);
-
         try {
-            $result = Authentication::resendLoginOtp($validated, 'api');
+            $result = Authentication::resendLoginOtp($request->validated(), 'api');
         } catch (\Modules\Authentication\Exceptions\SuspendedAccountException|\Modules\Authentication\Exceptions\InactiveAccountException $e) {
             return response()->json(['message' => $e->getMessage()], 403);
         } catch (\Modules\Authentication\Exceptions\InvalidCredentialsException $e) {

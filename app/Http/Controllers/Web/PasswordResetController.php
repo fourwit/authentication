@@ -10,6 +10,7 @@ use Modules\Authentication\Exceptions\InactiveAccountException;
 use Modules\Authentication\Exceptions\SuspendedAccountException;
 use Modules\Authentication\Facades\Authentication;
 use Modules\Authentication\Http\Requests\ForgotPasswordRequest;
+use Modules\Authentication\Http\Requests\OtpCodeRequest;
 use Modules\Authentication\Http\Requests\ResetPasswordRequest;
 use Modules\Authentication\Support\PasswordResetMethodResolver;
 
@@ -178,7 +179,7 @@ class PasswordResetController extends Controller
         ]);
     }
 
-    public function verify(Request $request)
+    public function verify(OtpCodeRequest $request)
     {
         $pending = session('pending_password_reset');
 
@@ -186,12 +187,8 @@ class PasswordResetController extends Controller
             return redirect()->route('authentication.password.request')->with('error', 'Please start the password reset process again.');
         }
 
-        $validated = $request->validate([
-            'code' => ['required', 'string', 'size:' . (int) config('authentication.otp.length', 6)],
-        ]);
-
         try {
-            $result = Authentication::verifyPasswordResetOtp($pending + $validated, 'web');
+            $result = Authentication::verifyPasswordResetOtp($pending + $request->validated(), 'web');
         } catch (InvalidPasswordResetTokenException $e) {
             return back()->withErrors(['code' => 'Invalid or expired code.']);
         } catch (\Modules\Authentication\Exceptions\MaxVerificationAttemptsExceededException $e) {

@@ -9,6 +9,7 @@ use Modules\Authentication\Exceptions\PhoneVerificationNotConfiguredException;
 use Modules\Authentication\Facades\Authentication;
 use Modules\Authentication\Http\Resources\AuthenticatedUserResource;
 use Modules\Authentication\Http\Requests\RegistrationOtpVerifyRequest;
+use Modules\Authentication\Http\Requests\ResendRegistrationOtpRequest;
 use Modules\Authentication\Http\Requests\SetPasswordRequest;
 use Modules\Authentication\Http\Requests\VerifyEmailRequest;
 
@@ -85,7 +86,7 @@ class EmailVerificationController extends Controller
         }
     }
 
-    public function resendRegistrationOtp(RegistrationOtpVerifyRequest $request)
+    public function resendRegistrationOtp(ResendRegistrationOtpRequest $request)
     {
         try {
             return response()->json(Authentication::resendRegistrationOtp($request->validated(), 'api'));

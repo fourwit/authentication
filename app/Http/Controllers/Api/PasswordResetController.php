@@ -9,6 +9,7 @@ use Modules\Authentication\Exceptions\SuspendedAccountException;
 use Modules\Authentication\Facades\Authentication;
 use Modules\Authentication\Http\Requests\ForgotPasswordRequest;
 use Modules\Authentication\Http\Requests\ResetPasswordRequest;
+use Modules\Authentication\Http\Requests\VerifyPasswordResetOtpRequest;
 
 class PasswordResetController extends Controller
 {
@@ -42,17 +43,10 @@ class PasswordResetController extends Controller
         ]);
     }
 
-    public function verifyOtp(\Illuminate\Http\Request $request)
+    public function verifyOtp(VerifyPasswordResetOtpRequest $request)
     {
-        $validated = $request->validate([
-            'auth_method' => ['required', 'string', 'in:email_otp,phone_otp'],
-            'email' => ['nullable', 'email', 'required_if:auth_method,email_otp'],
-            'phone' => ['nullable', 'string', 'required_if:auth_method,phone_otp'],
-            'code' => ['required', 'string', 'size:' . (int) config('authentication.otp.length', 6)],
-        ]);
-
         try {
-            $result = Authentication::verifyPasswordResetOtp($validated, 'api');
+            $result = Authentication::verifyPasswordResetOtp($request->validated(), 'api');
         } catch (InvalidPasswordResetTokenException $e) {
             return response()->json(['message' => 'Invalid or expired code.'], 422);
         } catch (\Modules\Authentication\Exceptions\MaxVerificationAttemptsExceededException $e) {
