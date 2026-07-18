@@ -2,7 +2,6 @@
 
 namespace Modules\Authentication\Services;
 
-use Illuminate\Support\Facades\Hash;
 use Modules\Authentication\Support\IdentityUserLookup;
 use Modules\Identity\Facades\Identity;
 
@@ -12,18 +11,6 @@ class RegistrationFollowUpService
     public const META_PASSWORD_PENDING = 'registration_password_pending';
     public const META_PASSWORD_MISSING = 'registration_password_missing';
     public const META_FLOW_COMPLETED_AT = 'registration_flow_completed_at';
-
-    public function initializeForOtpRegistration(object $user, string $authMethod): void
-    {
-        if (! $this->isOtpRegistrationMethod($authMethod)) {
-            return;
-        }
-
-        Identity::setMetadata($user, self::META_AUTH_METHOD, $authMethod);
-        Identity::setMetadata($user, self::META_PASSWORD_PENDING, (bool) config('authentication.after_otp_registration.prompt_for_password', true));
-        Identity::setMetadata($user, self::META_PASSWORD_MISSING, true);
-        Identity::forgetMetadata($user, self::META_FLOW_COMPLETED_AT);
-    }
 
     public function isOtpRegistrationMethod(?string $authMethod): bool
     {
@@ -93,22 +80,6 @@ class RegistrationFollowUpService
         }
 
         return 'dashboard';
-    }
-
-    public function setPassword(object $user, string $password): void
-    {
-        Identity::updateUser($user, [
-            'password' => Hash::make($password),
-        ]);
-
-        Identity::setMetadata($user, self::META_PASSWORD_PENDING, false);
-        Identity::setMetadata($user, self::META_PASSWORD_MISSING, false);
-    }
-
-    public function skipPassword(object $user): void
-    {
-        Identity::setMetadata($user, self::META_PASSWORD_PENDING, false);
-        Identity::setMetadata($user, self::META_PASSWORD_MISSING, true);
     }
 
     public function complete(object $user): void

@@ -3,7 +3,9 @@
 namespace Modules\Authentication\Tests\Feature\Api;
 
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Notification;
+use Modules\Authentication\Events\UserLoggedIn;
 use Modules\Authentication\Notifications\VerificationCodeNotification;
 use Modules\Authentication\Support\IdentityUserLookup;
 use Modules\Identity\Enums\UserStatus;
@@ -92,6 +94,65 @@ class LoginTest extends TestCase
             'email' => 'otp-api@example.com',
             'code' => $code,
         ])->assertOk();
+    }
+
+    public function test_successful_otp_login_dispatches_user_logged_in(): void
+    {
+        Event::fake([UserLoggedIn::class]);
+        Notification::fake();
+
+        $user = Identity::createUser([
+            'name' => 'Otp Event User',
+            'email' => 'otp-event@example.com',
+            'password' => bcrypt('password123'),
+        ]);
+
+        $this->postJson('/api/v1/auth/login', [
+            'auth_method' => 'email_otp',
+            'email' => 'otp-event@example.com',
+        ])->assertStatus(202);
+
+        $code = null;
+        Notification::assertSentTo($user, VerificationCodeNotification::class, function ($notification) use (&$code) {
+            $code = $notification->plainCode;
+
+            return true;
+        });
+
+        $this->postJson('/api/v1/auth/login/verify', [
+            'auth_method' => 'email_otp',
+            'email' => 'otp-event@example.com',
+            'code' => $code,
+        ])->assertOk();
+
+        Event::assertDispatched(UserLoggedIn::class, function (UserLoggedIn $event) use ($user) {
+            return (int) $event->user->id === (int) $user->id && $event->source === 'api';
+        });
+    }
+
+    public function test_failed_otp_verification_does_not_dispatch_user_logged_in(): void
+    {
+        Event::fake([UserLoggedIn::class]);
+        Notification::fake();
+
+        Identity::createUser([
+            'name' => 'Otp Failed Event User',
+            'email' => 'otp-failed-event@example.com',
+            'password' => bcrypt('password123'),
+        ]);
+
+        $this->postJson('/api/v1/auth/login', [
+            'auth_method' => 'email_otp',
+            'email' => 'otp-failed-event@example.com',
+        ])->assertStatus(202);
+
+        $this->postJson('/api/v1/auth/login/verify', [
+            'auth_method' => 'email_otp',
+            'email' => 'otp-failed-event@example.com',
+            'code' => '000000',
+        ])->assertStatus(422);
+
+        Event::assertNotDispatched(UserLoggedIn::class);
     }
 
     public function test_email_otp_login_still_sends_code_when_verification_flag_is_disabled(): void

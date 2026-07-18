@@ -20,7 +20,7 @@ class VerificationCodeTest extends TestCase
     {
         parent::setUp();
 
-        // Ensure code mode and sane defaults for tests
+        config()->set('authentication.verification.enabled', true);
         config()->set('authentication.verification.method', 'code');
         config()->set('authentication.verification.channel', 'email');
         config()->set('authentication.otp.length', 6);
@@ -320,5 +320,44 @@ class VerificationCodeTest extends TestCase
 
         $this->assertEquals('sent', $result['status']);
         $this->assertNotEmpty($sender->sent);
+    }
+
+    public function test_send_code_does_not_log_plain_otp_values(): void
+    {
+        NotificationFacade::fake();
+
+        $loggedMessages = [];
+        \Illuminate\Support\Facades\Log::listen(function ($message) use (&$loggedMessages) {
+            $loggedMessages[] = $message->message;
+            if (! empty($message->context) && is_array($message->context)) {
+                $loggedMessages[] = json_encode($message->context);
+            }
+        });
+
+        $user = \Modules\Identity\Facades\Identity::createUser([
+            'name' => 'No Log Otp',
+            'first_name' => 'No',
+            'last_name' => 'Log',
+            'email' => 'nologotp@example.com',
+            'password' => bcrypt('password123'),
+        ]);
+
+        $plainCode = null;
+        app(\Modules\Authentication\Services\VerificationCodeService::class)
+            ->sendCode($user->id, 'email', 'test', false, false, 'login');
+
+        NotificationFacade::assertSentTo($user, VerificationCodeNotification::class, function ($notification) use (&$plainCode) {
+            $plainCode = $notification->plainCode;
+
+            return true;
+        });
+
+        $this->assertNotNull($plainCode);
+        $this->assertMatchesRegularExpression('/^\d{6}$/', $plainCode);
+
+        $allLogged = implode("\n", $loggedMessages);
+        $this->assertStringNotContainsString($plainCode, $allLogged);
+        $this->assertStringNotContainsString('[AUTH VERIFY CODE]', $allLogged);
+        $this->assertStringNotContainsString('plain_code_preview', $allLogged);
     }
 }

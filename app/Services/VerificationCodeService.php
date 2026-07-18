@@ -117,22 +117,11 @@ class VerificationCodeService
         $expiresMin = (int) ($otpConfig['expires_minutes'] ?? 10);
         $codeData = $this->repository->createCode($userId, $channel, $destination, $purpose, $length, $expiresMin);
 
-        // Always surface the plain code in logs for easy localhost testing (register / resend).
-        // This solves "emails not received" when no SMTP (mailpit etc.) or when using queue without worker.
-        // The code is logged at INFO so you can see exactly what was generated on resend/re-login.
-        \Illuminate\Support\Facades\Log::info('[AUTH VERIFY CODE] ' . json_encode([
-            'user_id'    => $userId,
-            'channel'    => $channel,
-            'destination'=> $destination,
-            'code'       => $codeData['plain_code'],
-            'expires_at' => (string) $codeData['expires_at'],
-        ]));
-
         \Illuminate\Support\Facades\Log::info('[VERIFY-RESEND] Code created in DB, about to call notifier', [
             'user_id' => $userId,
             'channel' => $channel,
             'allowReplaceActive' => $allowReplaceActive,
-            'plain_code_preview' => substr($codeData['plain_code'], 0, 2) . '****', // don't log full in prod, but here for debug
+            'expires_at' => (string) $codeData['expires_at'],
         ]);
 
         try {
@@ -223,11 +212,6 @@ class VerificationCodeService
 
             if ($updateData) {
                 Identity::updateUser($user, $updateData);
-            }
-
-            // Dispatch success event (EmailVerified for compatibility + audit)
-            if ($purpose === 'register') {
-                event(new \Modules\Authentication\Events\EmailVerified($user, $source));
             }
         } else {
             // Wrong attempt: dispatch failed event

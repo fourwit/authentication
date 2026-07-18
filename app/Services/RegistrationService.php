@@ -2,95 +2,53 @@
 
 namespace Modules\Authentication\Services;
 
-use Illuminate\Validation\ValidationException;
-use Illuminate\Support\Facades\Hash;
+use Modules\Authentication\Actions\InitializeOtpRegistrationAction;
+use Modules\Authentication\Actions\IssueRegistrationGrantAction;
+use Modules\Authentication\Actions\RegisterUserAction;
+use Modules\Authentication\Actions\SendRegistrationVerificationCodeAction;
 use Modules\Authentication\DTOs\RegisterUserData;
-use Modules\Identity\Facades\Identity;
 
 class RegistrationService
 {
-    public function register(RegisterUserData $data, string $source = 'web')
+    public function __construct(
+        protected RegisterUserAction $registerUserAction,
+        protected InitializeOtpRegistrationAction $initializeOtpRegistrationAction,
+        protected IssueRegistrationGrantAction $issueRegistrationGrantAction,
+        protected SendRegistrationVerificationCodeAction $sendRegistrationVerificationCodeAction,
+        protected RegistrationFollowUpService $registrationFollowUpService,
+    ) {}
+
+    public function register(RegisterUserData $data, string $source = 'web'): array
     {
-        $existingUser = $data->email ? Identity::findByEmail($data->email) : null;
+        $registration = $this->registerUserAction->execute($data, $source);
+        $user = $registration['user'];
+        $reusedUnverified = (bool) ($registration['reused_unverified'] ?? false);
 
-        if ($existingUser) {
-            if (! empty($existingUser->email_verified_at)) {
-                throw ValidationException::withMessages([
-                    'email' => 'An account with this email already exists. Please log in instead.',
-                ]);
-            }
-
-            return [
-                'user' => $existingUser,
-                'was_created' => false,
-                'reused_unverified' => true,
-            ];
+        if ($this->registrationFollowUpService->isOtpRegistrationMethod($data->authMethod)) {
+            $this->initializeOtpRegistrationAction->execute($user, $data->authMethod);
         }
 
-        $resolvedName = $data->name
-            ?? $data->firstName
-            ?? $data->username
-            ?? $data->email
-            ?? $data->phone
-            ?? 'User';
+        $registrationGrant = null;
+        if ($this->registrationFollowUpService->isOtpRegistrationMethod($data->authMethod)) {
+            $registrationGrant = $this->issueRegistrationGrantAction->execute(
+                (int) $user->id,
+                $data->authMethod,
+                verified: false
+            );
+        }
 
-        [$resolvedFirstName, $resolvedLastName] = $this->resolveNameParts(
-            $data->name,
-            $data->firstName,
-            $data->lastName
+        $this->sendRegistrationVerificationCodeAction->execute(
+            $user,
+            $data->authMethod,
+            $reusedUnverified,
+            $source
         );
 
-        $payload = array_filter([
-            'name' => $resolvedName,
-            'email' => $data->email,
-            'username' => $data->username,
-            'phone' => $data->phone,
-            'first_name' => $resolvedFirstName,
-            'last_name' => $resolvedLastName,
-            'email_verified_at' => null,
-        ], static fn ($value) => ! is_null($value) && $value !== '');
-
-        if ($data->authMethod === 'email_password') {
-            $payload['password'] = Hash::make((string) $data->password);
-        } else {
-            $payload['password'] = Hash::make(str()->random(40));
-        }
-
         return [
-            'user' => Identity::createUser($payload),
-            'was_created' => true,
-            'reused_unverified' => false,
+            'user' => $user,
+            'was_created' => (bool) ($registration['was_created'] ?? false),
+            'reused_unverified' => $reusedUnverified,
+            'registration_grant' => $registrationGrant,
         ];
-    }
-
-    protected function resolveNameParts(?string $name, ?string $firstName, ?string $lastName): array
-    {
-        $firstName = is_string($firstName) ? trim($firstName) : null;
-        $lastName = is_string($lastName) ? trim($lastName) : null;
-
-        if (($firstName !== null && $firstName !== '') || ($lastName !== null && $lastName !== '')) {
-            return [
-                $firstName !== '' ? $firstName : null,
-                $lastName !== '' ? $lastName : null,
-            ];
-        }
-
-        $name = is_string($name) ? trim($name) : '';
-
-        if ($name === '') {
-            return [null, null];
-        }
-
-        $parts = preg_split('/\s+/', $name) ?: [];
-        $parts = array_values(array_filter($parts, static fn (?string $part): bool => $part !== null && $part !== ''));
-
-        if ($parts === []) {
-            return [null, null];
-        }
-
-        $resolvedFirstName = $parts[0];
-        $resolvedLastName = count($parts) > 1 ? implode(' ', array_slice($parts, 1)) : null;
-
-        return [$resolvedFirstName, $resolvedLastName];
     }
 }

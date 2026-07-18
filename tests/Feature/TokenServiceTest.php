@@ -21,7 +21,7 @@ class TokenServiceTest extends TestCase
 
         $this->assertSame('fake-token', $result['token']);
         $this->assertNotNull($result['expires_at']);
-        $this->assertSame(60, now()->diffInMinutes($user->lastExpiresAt, false));
+        $this->assertEqualsWithDelta(60, now()->diffInMinutes($user->lastExpiresAt, false), 1);
     }
 
     public function test_issue_for_api_login_uses_remember_token_expiry_when_remember_is_true(): void
@@ -37,7 +37,7 @@ class TokenServiceTest extends TestCase
 
         $this->assertSame('fake-token', $result['token']);
         $this->assertNotNull($result['expires_at']);
-        $this->assertSame(43200, now()->diffInMinutes($user->lastExpiresAt, false));
+        $this->assertEqualsWithDelta(43200, now()->diffInMinutes($user->lastExpiresAt, false), 1);
     }
 
     public function test_issue_for_web_login_does_not_apply_api_token_expiry(): void

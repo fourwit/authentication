@@ -22,7 +22,7 @@ return [
     'registration' => [
         'enabled' => env('AUTHENTICATION_REG_ENABLED', true),
         'methods' => ['email_password', 'email_otp', 'phone_otp'],
-        'default_method' => env('AUTHENTICATION_REG_DEFAULT', 'email_otp'),
+        'default_method' => env('AUTHENTICATION_REG_DEFAULT', 'email_password'),
         'show_password_strength_meter' => env('AUTHENTICATION_REG_SHOW_PASSWORD_STRENGTH_METER', true),
         'fields_per_method' => [
             'email_password' => [
@@ -53,11 +53,13 @@ return [
         'prompt_for_password' => true,
         'password_required' => false,
         'password_setup_route' => 'auth.set-password',
+        // Short-lived, single-use grant for unauthenticated registration completion (API).
+        'registration_grant_expires_minutes' => env('AUTHENTICATION_REGISTRATION_GRANT_EXPIRES_MINUTES', 60),
     ],
 
     'login' => [
         'methods' => ['email_password', 'email_otp', 'phone_otp'],
-        'default_method' => env('AUTHENTICATION_LOGIN_DEFAULT', 'email_otp'),
+        'default_method' => env('AUTHENTICATION_LOGIN_DEFAULT', 'email_password'),
         'show_alternative_methods' => true,
         'alternative_methods' => ['email_otp'],
         'fields_per_method' => [
@@ -178,7 +180,7 @@ return [
     |
     */
     'password_policy' => [
-        'enabled' => env('AUTH_PASSWORD_POLICY_ENABLED', false),
+        'enabled' => env('AUTH_PASSWORD_POLICY_ENABLED', true),
         'min_length' => (int) env('AUTH_PASSWORD_MIN_LENGTH', 8),
         'require_mixed_case' => env('AUTH_PASSWORD_REQUIRE_MIXED_CASE', true),
         'require_numbers' => env('AUTH_PASSWORD_REQUIRE_NUMBERS', true),

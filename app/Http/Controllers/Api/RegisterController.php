@@ -12,6 +12,13 @@ class RegisterController extends Controller
     public function store(RegisterRequest $request)
     {
         $result = Authentication::register($request->validated(), 'api');
-        return response()->json(['user' => new AuthenticatedUserResource($result['user'])], 201);
+
+        $payload = ['user' => new AuthenticatedUserResource($result['user'])];
+
+        if (! empty($result['registration_grant'])) {
+            $payload['registration_grant'] = $result['registration_grant'];
+        }
+
+        return response()->json($payload, 201);
     }
 }

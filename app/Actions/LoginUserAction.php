@@ -1,34 +1,28 @@
 <?php
 
-namespace Modules\Authentication\Services;
+namespace Modules\Authentication\Actions;
 
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Modules\Authentication\DTOs\LoginData;
+use Modules\Authentication\Events\UserLoggedIn;
 use Modules\Authentication\Exceptions\InvalidCredentialsException;
-use Modules\Authentication\Exceptions\UnsupportedLoginMethodException;
+use Modules\Authentication\Services\FailedLoginService;
+use Modules\Authentication\Services\TokenService;
 use Modules\Authentication\Support\AccountStatusGate;
-use Modules\Authentication\Support\IdentityUserLookup;
-use Modules\Identity\Facades\Identity;
+use Modules\Authentication\Support\LoginCredentialResolver;
 
-class AuthenticationService
+class LoginUserAction
 {
     public function __construct(
         protected TokenService $tokenService,
         protected FailedLoginService $failedLoginService,
     ) {}
 
-    public function login(LoginData $data, string $source = 'web'): array
+    public function execute(LoginData $data, string $source = 'web'): array
     {
-        if ($data->authMethod !== 'email_password') {
-            throw new UnsupportedLoginMethodException('OTP login is not implemented yet.');
-        }
-
-        $identifier = $data->email ?? $data->phone ?? '';
-        $user = $data->phone
-            ? IdentityUserLookup::findByPhone($data->phone)
-            : Identity::findByEmail((string) $data->email);
-
+        $identifier = LoginCredentialResolver::identifier($data);
+        $user = LoginCredentialResolver::resolveUser($data);
         $authenticated = false;
 
         if ($user) {
@@ -55,6 +49,8 @@ class AuthenticationService
 
         $this->failedLoginService->clear($identifier);
         $tokenData = $this->tokenService->issueForLogin($user, $data->remember, $source);
+
+        event(new UserLoggedIn($user, $source));
 
         return [
             'success' => true,

@@ -14,8 +14,15 @@ class SetPasswordRequest extends FormRequest
 
     public function rules(): array
     {
-        return [
+        $rules = [
             'password' => PasswordPolicy::rules(),
         ];
+
+        if (! auth()->check()) {
+            $rules['registration_grant'] = ['required', 'string', 'uuid'];
+            $rules['user_id'] = ['prohibited'];
+        }
+
+        return $rules;
     }
 }

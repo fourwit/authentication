@@ -29,7 +29,6 @@ class VerifyEmailRequest extends FormRequest
             'token' => ['sometimes'],
             'channel' => ['sometimes', 'string', VerificationConfig::channel() === 'phone' ? 'in:phone' : 'in:email'],
             'code' => ['sometimes', 'string', 'size:6'],
-            'user_id' => ['sometimes', 'integer'],
         ];
 
         // If using legacy path require email
@@ -42,13 +41,15 @@ class VerifyEmailRequest extends FormRequest
 
     protected function prepareForValidation(): void
     {
+        if (! PhoneInputConfig::supportsPhoneFields() || ! $this->exists('phone')) {
+            return;
+        }
+
         $phone = $this->input('phone');
         $normalizedPhone = is_string($phone) ? PhoneNumberNormalizer::normalize($phone) : null;
 
         $this->merge([
-            'phone' => PhoneInputConfig::supportsPhoneFields()
-                ? ($normalizedPhone ?? $phone)
-                : null,
+            'phone' => $normalizedPhone ?? $phone,
         ]);
     }
 }

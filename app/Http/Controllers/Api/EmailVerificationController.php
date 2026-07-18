@@ -3,6 +3,8 @@
 namespace Modules\Authentication\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use Modules\Authentication\Exceptions\InvalidCredentialsException;
+use Modules\Authentication\Exceptions\InvalidRegistrationGrantException;
 use Modules\Authentication\Exceptions\PhoneVerificationNotConfiguredException;
 use Modules\Authentication\Facades\Authentication;
 use Modules\Authentication\Http\Resources\AuthenticatedUserResource;
@@ -74,6 +76,7 @@ class EmailVerificationController extends Controller
                 'status' => $result['status'],
                 'next_step' => $result['next_step'],
                 'user' => new AuthenticatedUserResource($result['user']),
+                'registration_grant' => $result['registration_grant'] ?? null,
             ]);
         } catch (\Modules\Authentication\Exceptions\InvalidCredentialsException $e) {
             return response()->json(['message' => 'Invalid or expired code.'], 422);
@@ -93,17 +96,17 @@ class EmailVerificationController extends Controller
 
     public function setRegistrationPassword(SetPasswordRequest $request)
     {
-        $payload = $request->validated() + $request->only('user_id');
-
         try {
-            $result = Authentication::setRegistrationPassword($payload, 'api');
+            $result = Authentication::setRegistrationPassword($request->validated(), 'api');
 
             return response()->json([
                 'status' => $result['status'],
                 'next_step' => $result['next_step'],
                 'user' => new AuthenticatedUserResource($result['user']),
             ]);
-        } catch (\Modules\Authentication\Exceptions\InvalidCredentialsException $e) {
+        } catch (InvalidRegistrationGrantException $e) {
+            return response()->json(['message' => $e->getMessage()], 422);
+        } catch (InvalidCredentialsException $e) {
             return response()->json(['message' => 'Unable to set password.'], 422);
         }
     }

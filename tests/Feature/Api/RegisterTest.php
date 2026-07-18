@@ -213,7 +213,7 @@ class RegisterTest extends TestCase
             return true;
         });
 
-        $this->postJson('/api/v1/auth/register/verify', [
+        $verifyResponse = $this->postJson('/api/v1/auth/register/verify', [
             'auth_method' => 'email_otp',
             'email' => 'api-otp-register@example.com',
             'code' => $code,
@@ -222,5 +222,7 @@ class RegisterTest extends TestCase
                 'status' => 'verified',
                 'next_step' => 'set_password',
             ]);
+
+        $this->assertNotEmpty($verifyResponse->json('registration_grant'));
     }
 }
