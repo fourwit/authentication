@@ -2,6 +2,7 @@
 
 namespace Modules\Authentication\Providers;
 
+use Illuminate\Http\Resources\Json\JsonResource;
 use Illuminate\Support\Facades\Blade;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\View;
@@ -54,6 +55,8 @@ class AuthenticationServiceProvider extends ModuleServiceProvider
     public function boot(): void
     {
         parent::boot();
+
+        JsonResource::withoutWrapping();
 
         \Modules\Authentication\Support\PhoneInputConfig::storeFormat();
 

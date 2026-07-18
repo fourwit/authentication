@@ -7,11 +7,16 @@ use Modules\Authentication\Exceptions\InvalidCredentialsException;
 use Modules\Authentication\Exceptions\InvalidRegistrationGrantException;
 use Modules\Authentication\Exceptions\PhoneVerificationNotConfiguredException;
 use Modules\Authentication\Facades\Authentication;
-use Modules\Authentication\Http\Resources\AuthenticatedUserResource;
 use Modules\Authentication\Http\Requests\RegistrationOtpVerifyRequest;
 use Modules\Authentication\Http\Requests\ResendRegistrationOtpRequest;
 use Modules\Authentication\Http\Requests\SetPasswordRequest;
 use Modules\Authentication\Http\Requests\VerifyEmailRequest;
+use Modules\Authentication\Http\Resources\EmailVerificationResendResource;
+use Modules\Authentication\Http\Resources\EmailVerificationSendResource;
+use Modules\Authentication\Http\Resources\EmailVerificationVerifyResource;
+use Modules\Authentication\Http\Resources\OtpResendResource;
+use Modules\Authentication\Http\Resources\RegistrationOtpVerifiedResource;
+use Modules\Authentication\Http\Resources\RegistrationPasswordSetResource;
 
 class EmailVerificationController extends Controller
 {
@@ -25,12 +30,15 @@ class EmailVerificationController extends Controller
         $data = $request->validated();
         if (isset($data['channel']) || config('authentication.verification.method') === 'code') {
             try {
-                return response()->json(Authentication::sendVerificationCode($data + ['user_id' => auth()->id()], 'api'));
+                return new EmailVerificationSendResource(
+                    Authentication::sendVerificationCode($data + ['user_id' => auth()->id()], 'api')
+                );
             } catch (PhoneVerificationNotConfiguredException $e) {
                 return response()->json(['message' => $e->getMessage()], 422);
             }
         }
-        return response()->json(Authentication::sendEmailVerification($data, 'api'));
+
+        return new EmailVerificationSendResource(Authentication::sendEmailVerification($data, 'api'));
     }
 
     public function verify(VerifyEmailRequest $request)
@@ -44,14 +52,16 @@ class EmailVerificationController extends Controller
             try {
                 $result = Authentication::verifyCode($data + ['user_id' => auth()->id()], 'api');
                 if (($result['status'] ?? '') === 'verified') {
-                    return response()->json($result);
+                    return new EmailVerificationVerifyResource($result);
                 }
+
                 return response()->json(['status' => 'failed', 'message' => 'Invalid or expired code.'], 422);
             } catch (\Modules\Authentication\Exceptions\MaxVerificationAttemptsExceededException $e) {
                 return response()->json(['message' => $e->getMessage(), 'code' => 'MAX_ATTEMPTS'], 422);
             }
         }
-        return response()->json(Authentication::verifyEmail($data, 'api'));
+
+        return new EmailVerificationVerifyResource(Authentication::verifyEmail($data, 'api'));
     }
 
     public function resend(VerifyEmailRequest $request)
@@ -62,7 +72,9 @@ class EmailVerificationController extends Controller
 
         $data = $request->validated();
         try {
-            return response()->json(Authentication::resendVerificationCode($data + ['user_id' => auth()->id()], 'api'));
+            return new EmailVerificationResendResource(
+                Authentication::resendVerificationCode($data + ['user_id' => auth()->id()], 'api')
+            );
         } catch (PhoneVerificationNotConfiguredException $e) {
             return response()->json(['message' => $e->getMessage()], 422);
         }
@@ -73,12 +85,7 @@ class EmailVerificationController extends Controller
         try {
             $result = Authentication::verifyRegistrationOtp($request->validated(), 'api');
 
-            return response()->json([
-                'status' => $result['status'],
-                'next_step' => $result['next_step'],
-                'user' => new AuthenticatedUserResource($result['user']),
-                'registration_grant' => $result['registration_grant'] ?? null,
-            ]);
+            return new RegistrationOtpVerifiedResource($result);
         } catch (\Modules\Authentication\Exceptions\InvalidCredentialsException $e) {
             return response()->json(['message' => 'Invalid or expired code.'], 422);
         } catch (\Modules\Authentication\Exceptions\MaxVerificationAttemptsExceededException $e) {
@@ -89,7 +96,7 @@ class EmailVerificationController extends Controller
     public function resendRegistrationOtp(ResendRegistrationOtpRequest $request)
     {
         try {
-            return response()->json(Authentication::resendRegistrationOtp($request->validated(), 'api'));
+            return new OtpResendResource(Authentication::resendRegistrationOtp($request->validated(), 'api'));
         } catch (\Modules\Authentication\Exceptions\InvalidCredentialsException $e) {
             return response()->json(['message' => 'Unable to resend verification code.'], 422);
         }
@@ -98,13 +105,9 @@ class EmailVerificationController extends Controller
     public function setRegistrationPassword(SetPasswordRequest $request)
     {
         try {
-            $result = Authentication::setRegistrationPassword($request->validated(), 'api');
-
-            return response()->json([
-                'status' => $result['status'],
-                'next_step' => $result['next_step'],
-                'user' => new AuthenticatedUserResource($result['user']),
-            ]);
+            return new RegistrationPasswordSetResource(
+                Authentication::setRegistrationPassword($request->validated(), 'api')
+            );
         } catch (InvalidRegistrationGrantException $e) {
             return response()->json(['message' => $e->getMessage()], 422);
         } catch (InvalidCredentialsException $e) {

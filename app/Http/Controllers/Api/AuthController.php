@@ -3,14 +3,14 @@
 namespace Modules\Authentication\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
-use Illuminate\Validation\ValidationException;
 use Modules\Authentication\Facades\Authentication;
-use Modules\Authentication\Exceptions\UnsupportedLoginMethodException;
 use Modules\Authentication\Http\Requests\LoginRequest;
 use Modules\Authentication\Http\Requests\ResendLoginOtpRequest;
 use Modules\Authentication\Http\Requests\VerifyLoginOtpRequest;
+use Modules\Authentication\Http\Resources\AuthenticatedSessionResource;
 use Modules\Authentication\Http\Resources\AuthenticatedUserResource;
-use Modules\Authentication\Http\Resources\TokenResource;
+use Modules\Authentication\Http\Resources\LoginOtpResendResource;
+use Modules\Authentication\Http\Resources\LoginOtpSentResource;
 
 class AuthController extends Controller
 {
@@ -27,23 +27,10 @@ class AuthController extends Controller
         }
 
         if (($result['status'] ?? null) && in_array($request->validated('auth_method'), ['email_otp', 'phone_otp'], true)) {
-            $status = $result['status'] === 'rate_limited' ? 'rate_limited' : 'otp_sent';
-
-            return response()->json([
-                'status' => $status,
-                'channel' => $result['channel'],
-                'destination' => $result['destination'],
-                'expires_at' => $result['expires_at'],
-                'message' => $status === 'rate_limited'
-                    ? 'Too many login code requests were made for this account. Please wait before trying again.'
-                    : null,
-            ], $status === 'rate_limited' ? 429 : 202);
+            return new LoginOtpSentResource($result);
         }
 
-        return response()->json([
-            'user' => new AuthenticatedUserResource($result['user']),
-            'token' => new TokenResource($result),
-        ]);
+        return new AuthenticatedSessionResource($result);
     }
 
     public function verifyLoginOtp(VerifyLoginOtpRequest $request)
@@ -60,10 +47,7 @@ class AuthController extends Controller
             return response()->json(['message' => $e->getMessage()], 422);
         }
 
-        return response()->json([
-            'user' => new AuthenticatedUserResource($result['user']),
-            'token' => new TokenResource($result),
-        ]);
+        return new AuthenticatedSessionResource($result);
     }
 
     public function resendLoginOtp(ResendLoginOtpRequest $request)
@@ -76,10 +60,7 @@ class AuthController extends Controller
             return response()->json(['message' => 'These credentials do not match our records.'], 401);
         }
 
-        return response()->json([
-            'status' => $result['status'] ?? 'sent',
-            'channel' => $result['channel'] ?? null,
-        ]);
+        return new LoginOtpResendResource($result);
     }
 
     public function logout()

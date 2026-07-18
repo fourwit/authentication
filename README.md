@@ -2,6 +2,8 @@
 
 Fourwit Authentication provides login, logout, registration, password reset, and **verification code** flows (email + phone) for shared or owned user modes.
 
+**Architecture (v1.0):** Controllers → Form Requests → `AuthenticationManager` → Services (orchestration) → Actions (business + events) → payload-DTO domain events. See [`docs/architecture.md`](docs/architecture.md).
+
 **Verification uses short-lived hashed codes (never plain text in DB or logs).** Links are not used as the primary flow.
 
 ## Quick Config (Verification Codes)
@@ -42,6 +44,7 @@ User creation and lookup go through `Modules\Identity\Facades\Identity`.
 
 ## Docs
 
+- `docs/architecture.md` — v1.0 module architecture (flow, layers, Actions, events, Form Requests, API Resources)
 - `docs/installation.md`
 - `docs/configuration.md`
 - `docs/api.md`

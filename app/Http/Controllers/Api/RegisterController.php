@@ -5,7 +5,7 @@ namespace Modules\Authentication\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use Modules\Authentication\Facades\Authentication;
 use Modules\Authentication\Http\Requests\RegisterRequest;
-use Modules\Authentication\Http\Resources\AuthenticatedUserResource;
+use Modules\Authentication\Http\Resources\RegistrationResponseResource;
 
 class RegisterController extends Controller
 {
@@ -13,12 +13,6 @@ class RegisterController extends Controller
     {
         $result = Authentication::register($request->validated(), 'api');
 
-        $payload = ['user' => new AuthenticatedUserResource($result['user'])];
-
-        if (! empty($result['registration_grant'])) {
-            $payload['registration_grant'] = $result['registration_grant'];
-        }
-
-        return response()->json($payload, 201);
+        return new RegistrationResponseResource($result);
     }
 }
