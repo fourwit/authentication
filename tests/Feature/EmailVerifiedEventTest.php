@@ -54,8 +54,8 @@ class EmailVerifiedEventTest extends TestCase
         $this->assertSame('verified', $result['status']);
         Event::assertDispatchedTimes(EmailVerified::class, 1);
         Event::assertDispatched(EmailVerified::class, function (EmailVerified $event) use ($user) {
-            return (int) $event->user->id === (int) $user->id
-                && $event->source === 'api';
+            return (int) $event->payload->userId === (int) $user->id
+                && $event->payload->source === 'api';
         });
     }
 
@@ -85,8 +85,8 @@ class EmailVerifiedEventTest extends TestCase
         $this->assertSame('verified', $result['status']);
         Event::assertDispatchedTimes(EmailVerified::class, 1);
         Event::assertDispatched(EmailVerified::class, function (EmailVerified $event) use ($user) {
-            return (int) $event->user->id === (int) $user->id
-                && $event->source === 'api';
+            return (int) $event->payload->userId === (int) $user->id
+                && $event->payload->source === 'api';
         });
     }
 

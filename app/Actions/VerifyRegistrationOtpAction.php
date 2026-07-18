@@ -2,6 +2,7 @@
 
 namespace Modules\Authentication\Actions;
 
+use Modules\Authentication\DTOs\Events\EmailVerifiedPayload;
 use Modules\Authentication\Events\EmailVerified;
 use Modules\Authentication\Exceptions\InvalidCredentialsException;
 use Modules\Authentication\Services\RegistrationFollowUpService;
@@ -46,7 +47,7 @@ class VerifyRegistrationOtpAction
         $freshUser = $user->fresh();
 
         if ($channel === 'email') {
-            event(new EmailVerified($freshUser ?? $user, $source));
+            event(new EmailVerified(EmailVerifiedPayload::fromUser($freshUser ?? $user, $source)));
         }
 
         return [

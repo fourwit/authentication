@@ -31,7 +31,7 @@ class LogoutUserActionTest extends TestCase
 
         $this->assertTrue($user->tokenRevoked);
         Event::assertDispatched(UserLoggedOut::class, function (UserLoggedOut $event) use ($user) {
-            return $event->user === $user && $event->source === 'api';
+            return $event->payload->userId === 1 && $event->payload->source === 'api';
         });
     }
 

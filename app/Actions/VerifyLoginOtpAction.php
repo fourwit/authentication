@@ -4,6 +4,7 @@ namespace Modules\Authentication\Actions;
 
 use Illuminate\Support\Facades\Auth;
 use Modules\Authentication\DTOs\LoginData;
+use Modules\Authentication\DTOs\Events\UserLoggedInPayload;
 use Modules\Authentication\Events\UserLoggedIn;
 use Modules\Authentication\Exceptions\InvalidCredentialsException;
 use Modules\Authentication\Services\FailedLoginService;
@@ -52,7 +53,7 @@ class VerifyLoginOtpAction
         Auth::guard(config('authentication.guards.web', 'web'))->login($user, $data->remember);
         $tokenData = $this->tokenService->issueForLogin($user, $data->remember, $source);
 
-        event(new UserLoggedIn($user, $source));
+        event(new UserLoggedIn(UserLoggedInPayload::fromLogin($user, $data->authMethod, $source)));
 
         return [
             'success' => true,

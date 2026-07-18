@@ -5,6 +5,7 @@ namespace Modules\Authentication\Actions;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\ValidationException;
 use Modules\Authentication\DTOs\RegisterUserData;
+use Modules\Authentication\DTOs\Events\UserRegisteredPayload;
 use Modules\Authentication\Events\UserRegistered;
 use Modules\Identity\Facades\Identity;
 
@@ -59,7 +60,7 @@ class RegisterUserAction
 
         $user = Identity::createUser($payload);
 
-        event(new UserRegistered($user, $source));
+        event(new UserRegistered(UserRegisteredPayload::fromRegistration($user, $data->authMethod, $source)));
 
         return [
             'user' => $user,

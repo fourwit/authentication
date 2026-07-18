@@ -2,6 +2,7 @@
 
 namespace Modules\Authentication\Actions;
 
+use Modules\Authentication\DTOs\Events\EmailVerifiedPayload;
 use Modules\Authentication\Events\EmailVerified;
 use Modules\Authentication\Services\RegistrationFollowUpService;
 use Modules\Identity\Facades\Identity;
@@ -23,7 +24,11 @@ class VerifyEmailVerificationCodeAction
 
         $user = Identity::findById($userId);
 
-        event(new EmailVerified($user, $source));
+        if (! $user) {
+            return ['status' => 'failed'];
+        }
+
+        event(new EmailVerified(EmailVerifiedPayload::fromUser($user, $source)));
 
         return [
             'status' => 'verified',

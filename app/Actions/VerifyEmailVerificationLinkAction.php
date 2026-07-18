@@ -5,6 +5,7 @@ namespace Modules\Authentication\Actions;
 use Illuminate\Auth\Events\Verified;
 use Illuminate\Support\Carbon;
 use Modules\Authentication\DTOs\EmailVerificationData;
+use Modules\Authentication\DTOs\Events\EmailVerifiedPayload;
 use Modules\Authentication\Events\EmailVerified;
 use Modules\Authentication\Exceptions\InvalidVerificationTokenException;
 use Modules\Authentication\Support\EmailVerificationCredentialResolver;
@@ -25,14 +26,14 @@ class VerifyEmailVerificationLinkAction
         }
 
         if ($user->hasVerifiedEmail()) {
-            event(new EmailVerified($user, $source));
+            event(new EmailVerified(EmailVerifiedPayload::fromUser($user, $source)));
 
             return ['status' => 'already_verified', 'user' => $user];
         }
 
         $user->forceFill(['email_verified_at' => Carbon::now()])->save();
         event(new Verified($user));
-        event(new EmailVerified($user, $source));
+        event(new EmailVerified(EmailVerifiedPayload::fromUser($user, $source)));
 
         return ['status' => 'verified', 'user' => $user];
     }

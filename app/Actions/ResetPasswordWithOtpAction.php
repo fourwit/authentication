@@ -4,6 +4,7 @@ namespace Modules\Authentication\Actions;
 
 use Illuminate\Support\Facades\Hash;
 use Modules\Authentication\DTOs\ResetPasswordData;
+use Modules\Authentication\DTOs\Events\PasswordResetCompletedPayload;
 use Modules\Authentication\Events\PasswordResetCompleted;
 use Modules\Authentication\Exceptions\InvalidPasswordResetTokenException;
 use Modules\Authentication\Repositories\PasswordResetRepository;
@@ -52,7 +53,7 @@ class ResetPasswordWithOtpAction
             $response['auto_login'] = true;
         }
 
-        event(new PasswordResetCompleted($user, $source));
+        event(new PasswordResetCompleted(PasswordResetCompletedPayload::fromUser($user, $source)));
 
         return $response;
     }

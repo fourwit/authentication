@@ -126,7 +126,8 @@ class LoginTest extends TestCase
         ])->assertOk();
 
         Event::assertDispatched(UserLoggedIn::class, function (UserLoggedIn $event) use ($user) {
-            return (int) $event->user->id === (int) $user->id && $event->source === 'api';
+            return (int) $event->payload->userId === (int) $user->id
+                && $event->payload->source === 'api';
         });
     }
 

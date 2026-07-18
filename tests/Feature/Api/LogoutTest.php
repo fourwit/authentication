@@ -31,7 +31,8 @@ class LogoutTest extends TestCase
         Authentication::logout($user, 'api');
 
         Event::assertDispatched(UserLoggedOut::class, function (UserLoggedOut $event) use ($user) {
-            return (int) $event->user->id === (int) $user->id && $event->source === 'api';
+            return (int) $event->payload->userId === (int) $user->id
+                && $event->payload->source === 'api';
         });
     }
 }

@@ -3,6 +3,7 @@
 namespace Modules\Authentication\Actions;
 
 use Modules\Authentication\DTOs\PasswordResetRequestData;
+use Modules\Authentication\DTOs\Events\PasswordResetRequestedPayload;
 use Modules\Authentication\Events\PasswordResetRequested;
 use Modules\Authentication\Services\VerificationCodeService;
 use Modules\Authentication\Support\AccountStatusGate;
@@ -24,7 +25,7 @@ class SendPasswordResetOtpAction
             : Identity::findByEmail((string) $data->email);
 
         if (! $user || ! $identifier) {
-            event(new PasswordResetRequested($data->email ?? $data->phone ?? '', $source));
+            event(new PasswordResetRequested(PasswordResetRequestedPayload::fromIdentifier($data->email ?? $data->phone ?? '', $source)));
 
             return [
                 'status' => 'passwords.sent',
@@ -45,7 +46,7 @@ class SendPasswordResetOtpAction
             'forgot_password'
         );
 
-        event(new PasswordResetRequested($data->email ?? $data->phone ?? '', $source));
+        event(new PasswordResetRequested(PasswordResetRequestedPayload::fromIdentifier($data->email ?? $data->phone ?? '', $source)));
 
         return $result + [
             'auth_method' => $data->authMethod,

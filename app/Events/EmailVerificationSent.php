@@ -2,7 +2,9 @@
 
 namespace Modules\Authentication\Events;
 
+use Modules\Authentication\DTOs\Events\EmailVerificationSentPayload;
+
 class EmailVerificationSent
 {
-    public function __construct(public string $email, public string $source = 'web') {}
+    public function __construct(public readonly EmailVerificationSentPayload $payload) {}
 }

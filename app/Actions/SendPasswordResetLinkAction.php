@@ -4,6 +4,7 @@ namespace Modules\Authentication\Actions;
 
 use Illuminate\Support\Facades\Password;
 use Modules\Authentication\DTOs\PasswordResetRequestData;
+use Modules\Authentication\DTOs\Events\PasswordResetRequestedPayload;
 use Modules\Authentication\Events\PasswordResetRequested;
 
 class SendPasswordResetLinkAction
@@ -39,7 +40,7 @@ class SendPasswordResetLinkAction
                 }
             );
 
-            event(new PasswordResetRequested($data->email ?? '', $source));
+            event(new PasswordResetRequested(PasswordResetRequestedPayload::fromIdentifier($data->email ?? '', $source)));
 
             return ['status' => $status];
         } catch (\Symfony\Component\Mailer\Exception\TransportExceptionInterface | \Throwable $e) {
@@ -49,7 +50,7 @@ class SendPasswordResetLinkAction
                 'error' => $e->getMessage(),
             ]);
 
-            event(new PasswordResetRequested($data->email ?? '', $source));
+            event(new PasswordResetRequested(PasswordResetRequestedPayload::fromIdentifier($data->email ?? '', $source)));
 
             return ['status' => 'passwords.sent'];
         }

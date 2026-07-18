@@ -2,7 +2,9 @@
 
 namespace Modules\Authentication\Events;
 
+use Modules\Authentication\DTOs\Events\PasswordResetCompletedPayload;
+
 class PasswordResetCompleted
 {
-    public function __construct(public $user = null, public string $source = 'web') {}
+    public function __construct(public readonly PasswordResetCompletedPayload $payload) {}
 }

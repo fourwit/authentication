@@ -14,7 +14,7 @@ class SendWelcomeEmail
      */
     public function handle(EmailVerified $event): void
     {
-        $user = $event->user;
+        $user = Identity::findById($event->payload->userId);
 
         if (! $user) {
             return;
@@ -34,7 +34,7 @@ class SendWelcomeEmail
             $user->setMetadata('welcome_sent_at', now());
         } catch (\Throwable $e) {
             \Illuminate\Support\Facades\Log::warning('Failed to send welcome email', [
-                'user_id' => $user->id ?? null,
+                'user_id' => $event->payload->userId,
                 'error' => $e->getMessage(),
             ]);
         }

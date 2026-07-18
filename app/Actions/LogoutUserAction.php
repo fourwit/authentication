@@ -2,6 +2,7 @@
 
 namespace Modules\Authentication\Actions;
 
+use Modules\Authentication\DTOs\Events\UserLoggedOutPayload;
 use Modules\Authentication\Events\UserLoggedOut;
 use Modules\Authentication\Services\TokenService;
 
@@ -19,6 +20,6 @@ class LogoutUserAction
             return;
         }
 
-        event(new UserLoggedOut($user, $source));
+        event(new UserLoggedOut(UserLoggedOutPayload::fromUser($user, $source)));
     }
 }

@@ -3,6 +3,7 @@
 namespace Modules\Authentication\Actions;
 
 use Modules\Authentication\DTOs\EmailVerificationData;
+use Modules\Authentication\DTOs\Events\EmailVerificationSentPayload;
 use Modules\Authentication\Events\EmailVerificationSent;
 use Modules\Authentication\Exceptions\InvalidVerificationTokenException;
 use Modules\Authentication\Services\VerificationCodeService;
@@ -18,7 +19,7 @@ class SendEmailVerificationCodeAction
     public function execute(EmailVerificationData $data, string $source = 'web'): array
     {
         if (! VerificationConfig::enabled()) {
-            event(new EmailVerificationSent(EmailVerificationCredentialResolver::identifier($data), $source));
+            event(new EmailVerificationSent(EmailVerificationSentPayload::fromIdentifier(EmailVerificationCredentialResolver::identifier($data), $source)));
 
             return ['status' => 'disabled'];
         }
@@ -32,7 +33,7 @@ class SendEmailVerificationCodeAction
         $channel = VerificationConfig::ensureSupportedChannel();
         $this->verificationCodeService->sendCode($user->id, $channel, $source);
 
-        event(new EmailVerificationSent(EmailVerificationCredentialResolver::identifier($data), $source));
+        event(new EmailVerificationSent(EmailVerificationSentPayload::fromIdentifier(EmailVerificationCredentialResolver::identifier($data), $source)));
 
         return ['status' => 'sent', 'user' => $user];
     }
